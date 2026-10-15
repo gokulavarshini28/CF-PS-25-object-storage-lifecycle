@@ -1128,8 +1128,8 @@ async function loadLiveData(showMessage = true) {
 
   try {
     const [objectsResponse, lifecycleResponse] = await Promise.all([
-      fetch("/api/objects", { cache: "no-store" }),
-      fetch("/api/lifecycle", { cache: "no-store" })
+      fetch("http://localhost:3000/api/objects", { cache: "no-store" }),
+      fetch("http://localhost:3000/api/lifecycle", { cache: "no-store" })
     ]);
 
     if (!objectsResponse.ok) {

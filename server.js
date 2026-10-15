@@ -17,10 +17,35 @@ if (!BUCKET) {
   throw new Error("S3_BUCKET_NAME is missing from .env");
 }
 
+// CORS configuration for VS Code Live Server
+app.use((req, res, next) => {
+  res.header(
+    "Access-Control-Allow-Origin",
+    "http://127.0.0.1:5500"
+  );
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET, OPTIONS"
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+// AWS S3 connection
 const s3 = new S3Client({ region: REGION });
 
+// Serve frontend files
 app.use(express.static(__dirname, { index: "index.html" }));
 
+// Health check API
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
@@ -30,6 +55,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Fetch S3 objects
 app.get("/api/objects", async (req, res) => {
   try {
     const objects = [];
@@ -61,15 +87,21 @@ app.get("/api/objects", async (req, res) => {
     } while (continuationToken);
 
     res.set("Cache-Control", "no-store");
-    res.json({ bucket: BUCKET, count: objects.length, objects });
+    res.json({
+      bucket: BUCKET,
+      count: objects.length,
+      objects
+    });
   } catch (error) {
     console.error("S3 object listing failed:", error.name);
     res.status(500).json({
-      error: "Could not list S3 objects. Check AWS credentials and permissions."
+      error:
+        "Could not list S3 objects. Check AWS credentials and permissions."
     });
   }
 });
 
+// Fetch S3 lifecycle configuration
 app.get("/api/lifecycle", async (req, res) => {
   try {
     const result = await s3.send(
@@ -87,11 +119,13 @@ app.get("/api/lifecycle", async (req, res) => {
 
     console.error("S3 lifecycle read failed:", error.name);
     res.status(500).json({
-      error: "Could not read lifecycle configuration. Check AWS permissions."
+      error:
+        "Could not read lifecycle configuration. Check AWS permissions."
     });
   }
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`Dashboard: http://localhost:${PORT}`);
   console.log(`Bucket: ${BUCKET} (${REGION})`);
